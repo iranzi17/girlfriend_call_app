@@ -30,7 +30,7 @@ jobs:
         run: flutter test
 
       - name: Build APK (release)
-        run: flutter build apk --release
+        run: flutter build apk --release -v
 
       - name: Upload Release APK
         uses: softprops/action-gh-release@v1
