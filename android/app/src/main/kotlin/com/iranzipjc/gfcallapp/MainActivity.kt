@@ -1,4 +1,4 @@
-package com.example.girlfriend_call_app
+package com.iranzipjc.gfcallapp
 
 import io.flutter.embedding.android.FlutterActivity
 
