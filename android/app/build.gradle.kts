@@ -23,7 +23,7 @@ if (googleServicesFiles.any { it.exists() }) {
 }
 
 android {
-    namespace = "com.example.girlfriend_call_app"
+    namespace = "com.iranzipjc.gfcallapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
