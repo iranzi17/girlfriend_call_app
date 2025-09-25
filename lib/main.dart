@@ -18,7 +18,14 @@ Future<void> requestPermissions() async {
 }
 
 // Background call
-Future<void> backgroundCall(String phoneNumber) async {
+@pragma('vm:entry-point')
+Future<void> backgroundCall(int id, Map<String, dynamic> params) async {
+  final phoneNumber = params['phoneNumber'] as String?;
+  if (phoneNumber == null || phoneNumber.isEmpty) {
+    debugPrint("⚠️ No phone number found for alarm $id");
+    return;
+  }
+
   final Uri telUri = Uri(scheme: 'tel', path: phoneNumber);
 
   if (await Permission.phone.isGranted) {
@@ -114,11 +121,14 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
     final delay =
         duration.isNegative ? duration + const Duration(days: 1) : duration;
 
+    final alarmId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     await AndroidAlarmManager.oneShot(
       delay,
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      () => backgroundCall(_phoneController.text),
+      alarmId,
+      backgroundCall,
       wakeup: true,
+      rescheduleOnReboot: true,
+      params: {'phoneNumber': _phoneController.text},
     );
 
     if (!mounted) return;
