@@ -33,8 +33,11 @@ Future<void> backgroundCall(String phoneNumber) async {
 // Get current location
 Future<String> getCurrentLocation() async {
   if (await Permission.location.request().isGranted) {
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+    );
     Position pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+        locationSettings: locationSettings);
     return "Lat: ${pos.latitude}, Lng: ${pos.longitude}";
   } else {
     return "⚠️ Location permission denied";
@@ -117,6 +120,8 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
       () => backgroundCall(_phoneController.text),
       wakeup: true,
     );
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

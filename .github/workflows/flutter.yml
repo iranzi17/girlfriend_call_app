@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v3
@@ -15,7 +17,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.0"   # Match your version
+          flutter-version: "3.35.4"
+          channel: "stable"
 
       - name: Install dependencies
         run: flutter pub get
