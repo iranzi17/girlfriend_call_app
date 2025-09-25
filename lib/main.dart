@@ -236,7 +236,7 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
       return DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: Colors.blueGrey.withOpacity(0.08),
+          color: Colors.blueGrey.withValues(alpha: 0.08),
         ),
         child: const Center(
           child: Text(
