@@ -118,6 +118,8 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
       wakeup: true,
     );
 
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
