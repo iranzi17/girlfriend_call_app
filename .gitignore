@@ -1,0 +1,48 @@
+# Flutter/Dart/Pub
+.dart_tool/
+.packages
+.pub-cache/
+build/
+flutter_*.png
+generated_plugin_registrant.dart
+
+# IntelliJ/VSCode
+.idea/
+.vscode/
+*.iml
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/google-services.json
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner/GeneratedPluginRegistrant.*
+*.xcworkspace
+*.xcuserstate
+*.xcuserdatad
+*.lock
+
+# macOS
+macos/Pods/
+macos/.symlinks/
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Windows
+windows/GeneratedPluginRegistrant.*
+
+# Linux
+linux/GeneratedPluginRegistrant.*
+
+# Web
+web/GeneratedPluginRegistrant.*
+
+# Logs & temp
+*.log
+*.tmp
+*.swp
