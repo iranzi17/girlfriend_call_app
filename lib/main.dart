@@ -172,9 +172,10 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("📞 Call Reminder + Location")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
               controller: _phoneController,
@@ -186,13 +187,15 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
             ),
             const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  _selectedTime == null
-                      ? "No time selected"
-                      : "Selected: ${_selectedTime!.format(context)}",
+                Expanded(
+                  child: Text(
+                    _selectedTime == null
+                        ? "No time selected"
+                        : "Selected: ${_selectedTime!.format(context)}",
+                  ),
                 ),
+                const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: _pickTime,
                   child: const Text("Pick Time"),
@@ -214,9 +217,10 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Text(_locationMessage,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(
+              _locationMessage,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
             const SizedBox(height: 20),
             SizedBox(height: 220, child: _buildMapPreview()),
             const SizedBox(height: 20),
@@ -229,7 +233,7 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
         ),
       ),
     );
-}
+  }
 
   Widget _buildMapPreview() {
     if (_currentLatLng == null) {
