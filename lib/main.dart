@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
@@ -34,17 +36,23 @@ Future<void> requestPermissions() async {
 }
 
 // Get current location
-Future<String> getCurrentLocation() async {
-  if (await Permission.location.request().isGranted) {
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-    );
-    Position pos = await Geolocator.getCurrentPosition(
-        locationSettings: locationSettings);
-    return "Lat: ${pos.latitude}, Lng: ${pos.longitude}";
-  } else {
-    return "⚠️ Location permission denied";
+Future<Position> getCurrentLocation() async {
+  final permissionStatus = await Permission.location.request();
+
+  if (!permissionStatus.isGranted) {
+    throw PermissionDeniedException('Location permission denied');
   }
+
+  final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    throw const LocationServiceDisabledException();
+  }
+
+  const locationSettings = LocationSettings(
+    accuracy: LocationAccuracy.high,
+  );
+
+  return Geolocator.getCurrentPosition(locationSettings: locationSettings);
 }
 
 // Main App
@@ -72,7 +80,9 @@ class CallSchedulerScreen extends StatefulWidget {
 class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
   final TextEditingController _phoneController = TextEditingController();
   TimeOfDay? _selectedTime;
-  String _location = "📍 Location not fetched";
+  String _locationMessage = "📍 Location not fetched";
+  LatLng? _currentLatLng;
+  bool _isFetchingLocation = false;
 
   // Pick time
   Future<void> _pickTime() async {
@@ -89,9 +99,36 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
 
   // Fetch location
   Future<void> _fetchLocation() async {
-    final loc = await getCurrentLocation();
     setState(() {
-      _location = loc;
+      _isFetchingLocation = true;
+      _locationMessage = "📡 Fetching location…";
+    });
+
+    String message = _locationMessage;
+    LatLng? latLng = _currentLatLng;
+
+    try {
+      final position = await getCurrentLocation();
+      message =
+          "Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}";
+      latLng = LatLng(position.latitude, position.longitude);
+    } on PermissionDeniedException {
+      message = "⚠️ Location permission denied";
+      latLng = null;
+    } on LocationServiceDisabledException {
+      message = "⚠️ Enable location services to view map";
+      latLng = null;
+    } catch (e) {
+      message = "⚠️ Failed to fetch location";
+      latLng = null;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isFetchingLocation = false;
+      _locationMessage = message;
+      _currentLatLng = latLng;
     });
   }
 
@@ -129,7 +166,7 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            "✅ Call scheduled at ${_selectedTime!.format(context)} ($_location)"),
+            "✅ Call scheduled at ${_selectedTime!.format(context)} ($_locationMessage)"),
       ),
     );
   }
@@ -138,9 +175,10 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("📞 Call Reminder + Location")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
               controller: _phoneController,
@@ -152,13 +190,15 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
             ),
             const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  _selectedTime == null
-                      ? "No time selected"
-                      : "Selected: ${_selectedTime!.format(context)}",
+                Expanded(
+                  child: Text(
+                    _selectedTime == null
+                        ? "No time selected"
+                        : "Selected: ${_selectedTime!.format(context)}",
+                  ),
                 ),
+                const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: _pickTime,
                   child: const Text("Pick Time"),
@@ -167,14 +207,25 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: _fetchLocation,
-              icon: const Icon(Icons.location_on),
-              label: const Text("Fetch My Location"),
+              onPressed: _isFetchingLocation ? null : _fetchLocation,
+              icon: _isFetchingLocation
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.location_on),
+              label: Text(
+                _isFetchingLocation ? "Fetching…" : "Fetch My Location",
+              ),
             ),
             const SizedBox(height: 10),
-            Text(_location,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(
+              _locationMessage,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(height: 220, child: _buildMapPreview()),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: _scheduleCall,
@@ -183,6 +234,54 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMapPreview() {
+    if (_currentLatLng == null) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.blueGrey.withValues(alpha: 0.08),
+        ),
+        child: const Center(
+          child: Text(
+            "Fetch your location to preview it on the map",
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: FlutterMap(
+        options: MapOptions(
+          initialCenter: _currentLatLng!,
+          initialZoom: 15,
+          interactionOptions: const InteractionOptions(
+            flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+          ),
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.example.girlfriend_call_app',
+          ),
+          MarkerLayer(markers: [
+            Marker(
+              point: _currentLatLng!,
+              width: 40,
+              height: 40,
+              child: const Icon(
+                Icons.location_on,
+                color: Colors.red,
+                size: 36,
+              ),
+            ),
+          ]),
+        ],
       ),
     );
   }
