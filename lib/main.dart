@@ -18,11 +18,7 @@ Future<void> requestPermissions() async {
 }
 
 // Background call
-Future<void> backgroundCall(Map<String, dynamic>? params) async {
-  final String? phoneNumber = params?['phoneNumber'] as String?;
 
-  if (phoneNumber == null || phoneNumber.isEmpty) {
-    debugPrint('⚠️ No phone number provided for background call.');
     return;
   }
 
@@ -121,11 +117,10 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
     final delay =
         duration.isNegative ? duration + const Duration(days: 1) : duration;
 
+    final alarmId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     await AndroidAlarmManager.oneShot(
       delay,
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      backgroundCall,
-      wakeup: true,
+
       params: {'phoneNumber': _phoneController.text},
     );
 
