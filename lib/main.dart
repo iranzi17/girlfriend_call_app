@@ -21,11 +21,6 @@ Future<void> requestPermissions() async {
 
 // Background call
 @pragma('vm:entry-point')
-Future<void> _triggerCall(int id, Map<String, dynamic>? params) async {
-  final phoneNumber = params?['phoneNumber'] as String?;
-
-  if (phoneNumber == null || phoneNumber.isEmpty) {
-    debugPrint('⚠️ Alarm $id triggered without a phone number');
     return;
   }
 
