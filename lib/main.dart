@@ -21,15 +21,6 @@ Future<void> requestPermissions() async {
 
 // Background call
 @pragma('vm:entry-point')
-Future<void> _triggerCall(dynamic params) async {
-  if (params is! Map) {
-    debugPrint('⚠️ Invalid parameters received for scheduled call: $params');
-    return;
-  }
-
-  final phoneNumber = (params as Map)['phoneNumber'] as String?;
-  if (phoneNumber == null || phoneNumber.isEmpty) {
-    debugPrint('⚠️ No phone number provided for scheduled call.');
     return;
   }
 
