@@ -20,7 +20,12 @@ Future<void> requestPermissions() async {
 }
 
 // Background call
+@pragma('vm:entry-point')
+Future<void> _triggerCall(int id, Map<String, dynamic>? params) async {
+  final phoneNumber = params?['phoneNumber'] as String?;
 
+  if (phoneNumber == null || phoneNumber.isEmpty) {
+    debugPrint('⚠️ Alarm $id triggered without a phone number');
     return;
   }
 
@@ -157,7 +162,8 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
     final alarmId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     await AndroidAlarmManager.oneShot(
       delay,
-
+      alarmId,
+      _triggerCall,
       params: {'phoneNumber': _phoneController.text},
     );
 
