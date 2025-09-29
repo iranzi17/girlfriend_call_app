@@ -471,6 +471,8 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
   void initState() {
     super.initState();
     _restoreCachedRemoteLocation();
+    unawaited(LocationSyncService.instance
+        .start(userId: LocationSyncService.defaultUserId));
   }
 
   Future<void> _restoreCachedRemoteLocation() async {
@@ -575,13 +577,6 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
       });
       return null;
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(LocationSyncService.instance
-        .start(userId: LocationSyncService.defaultUserId));
   }
 
   // Pick time
