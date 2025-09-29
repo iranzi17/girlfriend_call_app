@@ -8,10 +8,17 @@ import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Contract used by UI code to coordinate location syncing.
+abstract class LocationSyncClient {
+  Future<void> start({required String userId});
+
+  Future<void> pushPosition(Position position);
+}
+
 /// A singleton service that keeps the user's location in sync with Firestore
 /// and schedules periodic background updates so other devices know the last
 /// reported position.
-class LocationSyncService {
+class LocationSyncService implements LocationSyncClient {
   LocationSyncService._internal();
 
   /// Default user id used for demo purposes. Replace with an authenticated id
