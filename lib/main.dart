@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -5,18 +7,29 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:firebase_core/firebase_core.dart';
+
+import 'location_sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   await AndroidAlarmManager.initialize();
-  await requestPermissions();
+  final permissionsGranted = await requestPermissions();
+  if (permissionsGranted) {
+    await LocationSyncService.instance
+        .start(userId: LocationSyncService.defaultUserId);
+  }
   runApp(const MyApp());
 }
 
 // Request permissions
-Future<void> requestPermissions() async {
-  await Permission.phone.request();
-  await Permission.location.request();
+Future<bool> requestPermissions() async {
+  final phoneStatus = await Permission.phone.request();
+  final locationStatus = await Permission.location.request();
+
+  return phoneStatus.isGranted &&
+      (locationStatus.isGranted || locationStatus.isLimited);
 }
 
 // Background call
@@ -48,7 +61,7 @@ Future<void> _triggerCall(dynamic params) async {
 Future<Position> getCurrentLocation() async {
   final permissionStatus = await Permission.location.request();
 
-  if (!permissionStatus.isGranted) {
+  if (!permissionStatus.isGranted && !permissionStatus.isLimited) {
     throw PermissionDeniedException('Location permission denied');
   }
 
@@ -93,6 +106,13 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
   LatLng? _currentLatLng;
   bool _isFetchingLocation = false;
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(LocationSyncService.instance
+        .start(userId: LocationSyncService.defaultUserId));
+  }
+
   // Pick time
   Future<void> _pickTime() async {
     final TimeOfDay? picked = await showTimePicker(
@@ -118,9 +138,12 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
 
     try {
       final position = await getCurrentLocation();
+      unawaited(LocationSyncService.instance
+          .start(userId: LocationSyncService.defaultUserId));
       message =
           "Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}";
       latLng = LatLng(position.latitude, position.longitude);
+      unawaited(LocationSyncService.instance.pushPosition(position));
     } on PermissionDeniedException {
       message = "⚠️ Location permission denied";
       latLng = null;
