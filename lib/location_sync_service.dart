@@ -24,7 +24,15 @@ class LocationSyncService {
 
   static final LocationSyncService instance = LocationSyncService._internal();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static FirebaseFirestore? _firestoreInstance;
+
+  static FirebaseFirestore get _firestore {
+    final firestore = _firestoreInstance;
+    if (firestore == null) {
+      throw StateError('Firebase has not been initialized');
+    }
+    return firestore;
+  }
   StreamSubscription<Position>? _positionSubscription;
   Timer? _retryTimer;
   Position? _pendingPosition;
@@ -47,8 +55,13 @@ class LocationSyncService {
       return;
     }
 
+    final initialized = await _ensureFirebaseInitialized();
+    if (!initialized) {
+      _isStarted = false;
+      return;
+    }
+
     _isStarted = true;
-    await _ensureFirebaseInitialized();
     await _ensureLocationStream();
     await syncCurrentLocation();
     await _scheduleBackgroundSync();
@@ -115,6 +128,14 @@ class LocationSyncService {
     };
 
     try {
+      final initialized = await _ensureFirebaseInitialized();
+      if (!initialized) {
+        debugPrint(
+            'LocationSyncService: skipping upload because Firebase failed to initialize');
+        _scheduleRetry();
+        return;
+      }
+
       await _firestore
           .collection('users')
           .doc(userId)
@@ -160,7 +181,11 @@ class LocationSyncService {
   @pragma('vm:entry-point')
   static Future<void> _backgroundCallback(dynamic params) async {
     WidgetsFlutterBinding.ensureInitialized();
-    await _ensureFirebaseInitialized();
+    final initialized = await _ensureFirebaseInitialized();
+    if (!initialized) {
+      debugPrint('LocationSyncService background: Firebase initialization failed');
+      return;
+    }
 
     final userId =
         params is Map<String, dynamic> ? params['userId'] as String? : null;
@@ -191,7 +216,7 @@ class LocationSyncService {
       };
 
       try {
-        await FirebaseFirestore.instance
+        await _firestore
             .collection('users')
             .doc(userId)
             .set(payload, SetOptions(merge: true));
@@ -214,9 +239,27 @@ class LocationSyncService {
     );
   }
 
-  static Future<void> _ensureFirebaseInitialized() async {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp();
+  static Future<bool> _ensureFirebaseInitialized() async {
+    if (_firestoreInstance != null) {
+      return true;
     }
+
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
+    } catch (error) {
+      debugPrint('LocationSyncService: Firebase initialization error: $error');
+      return false;
+    }
+
+    try {
+      _firestoreInstance = FirebaseFirestore.instance;
+    } catch (error) {
+      debugPrint('LocationSyncService: unable to obtain Firestore instance: $error');
+      return false;
+    }
+
+    return true;
   }
 }
