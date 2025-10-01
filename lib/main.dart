@@ -547,6 +547,10 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
 
       await persistRemoteLocation(remoteLocation, prefs: prefs);
 
+      if (!mounted) {
+        return remoteLocation;
+      }
+
       final String message = remoteLocation.isStale
           ? '⚠️ Remote location may be stale (last update ${_formatTimestamp(remoteLocation.lastUpdated)})'
           : '📍 Remote: Lat ${remoteLocation.latitude.toStringAsFixed(5)}, Lng ${remoteLocation.longitude.toStringAsFixed(5)}';
