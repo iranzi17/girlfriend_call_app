@@ -17,12 +17,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await AndroidAlarmManager.initialize();
+  final LocationSyncClient locationSyncClient = LocationSyncService.instance;
   final permissionsGranted = await requestPermissions();
   if (permissionsGranted) {
-    await LocationSyncService.instance
+    await locationSyncClient
         .start(userId: LocationSyncService.defaultUserId);
   }
-  runApp(const MyApp());
+  runApp(MyApp(locationSyncClient: locationSyncClient));
 }
 
 // Request permissions
@@ -442,7 +443,11 @@ String _formatTimestamp(DateTime? timestamp) {
 
 // Main App
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, LocationSyncClient? locationSyncClient})
+      : _locationSyncClient =
+            locationSyncClient ?? LocationSyncService.instance;
+
+  final LocationSyncClient _locationSyncClient;
 
   @override
   Widget build(BuildContext context) {
@@ -450,13 +455,15 @@ class MyApp extends StatelessWidget {
       title: "Call Reminder App",
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const CallSchedulerScreen(),
+      home: CallSchedulerScreen(locationSyncClient: _locationSyncClient),
     );
   }
 }
 
 class CallSchedulerScreen extends StatefulWidget {
-  const CallSchedulerScreen({super.key});
+  const CallSchedulerScreen({super.key, this.locationSyncClient});
+
+  final LocationSyncClient? locationSyncClient;
 
   @override
   State<CallSchedulerScreen> createState() => _CallSchedulerScreenState();
@@ -470,13 +477,16 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
   bool _isFetchingLocation = false;
   bool _isLoadingRemoteLocation = false;
   String? _sharedRemoteUserId;
+  late final LocationSyncClient _locationSyncClient;
 
   @override
   void initState() {
     super.initState();
+    _locationSyncClient =
+        widget.locationSyncClient ?? LocationSyncService.instance;
     _restoreCachedRemoteLocation();
-    unawaited(LocationSyncService.instance
-        .start(userId: LocationSyncService.defaultUserId));
+    unawaited(
+        _locationSyncClient.start(userId: LocationSyncService.defaultUserId));
   }
 
   Future<void> _restoreCachedRemoteLocation() async {
@@ -608,12 +618,12 @@ class _CallSchedulerScreenState extends State<CallSchedulerScreen> {
 
     try {
       final position = await getCurrentLocation();
-      unawaited(LocationSyncService.instance
+      unawaited(_locationSyncClient
           .start(userId: LocationSyncService.defaultUserId));
       message =
           "Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}";
       latLng = LatLng(position.latitude, position.longitude);
-      unawaited(LocationSyncService.instance.pushPosition(position));
+      unawaited(_locationSyncClient.pushPosition(position));
     } on PermissionDeniedException {
       message = "⚠️ Location permission denied";
       latLng = null;
