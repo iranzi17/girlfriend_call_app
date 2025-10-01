@@ -13,7 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'location_sync_service.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await AndroidAlarmManager.initialize();
